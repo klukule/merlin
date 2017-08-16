@@ -12,5 +12,7 @@ namespace Merlin
         public static MovingObject GetMovingObject(this LocalPlayerCharacter localPlayer) => localPlayer.Internal;
         public static WorldObject GetWorldObject(this LocalPlayerCharacter localPlayer) => localPlayer.Internal;
         public static SimulationObject GetSimulationObject(this LocalPlayerCharacter localPlayer) => localPlayer.Internal;
+
+        public static PlayerCharacter GetPlayerCharacter(this LocalPlayerCharacter localPlayer) => localPlayer.Internal;
     }
 }
