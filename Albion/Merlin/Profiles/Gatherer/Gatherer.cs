@@ -12,6 +12,7 @@ namespace Merlin.Profiles.Gatherer
         Harvest,
         Combat,
         Bank,
+        Auction,
     }
 
     public enum Trigger
@@ -23,6 +24,7 @@ namespace Merlin.Profiles.Gatherer
         Overweight,
         EncounteredAttacker,
         EliminatedAttacker,
+        AuctionDone,
     }
 
     public sealed partial class Gatherer : Profile

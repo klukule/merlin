@@ -72,6 +72,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="API\Extensions\HarvestableObjectViewExtensions.cs" />
+    <Compile Include="API\Extensions\SimulationObjectViewExtensions.cs" />
     <Compile Include="Core.cs" />
     <Compile Include="API\Direct\ActiveSpellDescriptor.cs" />
     <Compile Include="API\Direct\AgentDescriptor.cs" />
@@ -180,6 +182,8 @@
     <Compile Include="Pathing\Worldmap\WorldmapNode.cs" />
     <Compile Include="Pathing\Worldmap\WorldmapPathfinder.cs" />
     <Compile Include="Profile.cs" />
+    <Compile Include="Profiles\ClusterPathingRequest.cs" />
+    <Compile Include="Profiles\Gatherer\Gatherer.Harvest.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.Search.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
