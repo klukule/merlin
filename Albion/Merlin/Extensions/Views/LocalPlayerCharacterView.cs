@@ -26,7 +26,7 @@ namespace Merlin
 											Type.DefaultBinder, new Type[] { typeof(byte), typeof(FightingObjectView) }, null);
 
 			_startCastInternalPosition = inputHandlerType.GetMethod("StartCastInternal", BindingFlags.NonPublic | BindingFlags.Instance, 
-											Type.DefaultBinder, new Type[] { typeof(byte), typeof(ahl) }, null);
+											Type.DefaultBinder, new Type[] { typeof(byte), typeof(ajg) }, null);
 
 			_doActionStaticObjectInteraction = inputHandlerType.GetMethod("DoActionStaticObjectInteraction", BindingFlags.NonPublic | BindingFlags.Instance);
 		}
@@ -98,7 +98,10 @@ namespace Merlin
 		public static bool IsUnderAttack(this LocalPlayerCharacterView instance, out FightingObjectView attacker)
 		{
 			var entities = Client.Instance.GetEntities<MobView>((entity) =>
-			{
+			{			
+                if (entity.IsDead())
+                    return false;
+
 				var target = entity.GetAttackTarget();
 
 				if (target != null && target.Equals(instance))
@@ -154,9 +157,9 @@ namespace Merlin
 			_startCastInternalPosition.Invoke(instance.InputHandler, new object[] { (byte)slot, target.c() });
 		}
 
-		public static void Interact(this LocalPlayerCharacterView instance, WorldObjectView target)
+		public static void Interact(this LocalPlayerCharacterView instance, WorldObjectView target, string collider = null)
 		{
-			_doActionStaticObjectInteraction.Invoke(instance.InputHandler, new object[] { target, String.Empty });
+			_doActionStaticObjectInteraction.Invoke(instance.InputHandler, new object[] { target, collider ?? string.Empty });
 		}
 
 		public static float GetHealth(this LocalPlayerCharacterView instance)
@@ -185,6 +188,14 @@ namespace Merlin
 				return false;
 
 			return true;
+		}
+
+		public static bool IsInLineOfSight(this LocalPlayerCharacterView instance, FightingObjectView target)
+		{
+			var targetPos = target.FightingObject.hy();
+			var sightChecker = instance.PlayerCharacter.xm<au4>();
+
+			return alb.a().w().f(sightChecker.n().hy(), targetPos, out var outPoint, 2);
 		}
 
 		public static bool GetMount(this LocalPlayerCharacterView instance, out MountObjectView mount)

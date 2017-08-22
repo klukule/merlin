@@ -1,9 +1,11 @@
 ﻿using Merlin.API;
 using Stateless;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using WorldMap;
+using YinYang.CodeProject.Projects.SimplePathfinding.Helpers;
 using YinYang.CodeProject.Projects.SimplePathfinding.PathFinders.AStar;
 
 namespace Merlin.Profiles
@@ -22,7 +24,7 @@ namespace Merlin.Profiles
 
         private StateMachine<State, Trigger> _state;
 
-        private ClusterPathingRequest _exitPathingRequest;
+        private PositionPathingRequest _exitPathingRequest;
 
         #endregion Fields
 
@@ -99,8 +101,9 @@ namespace Merlin.Profiles
 
                             var destination = new Vector3(exitLocation.g(), 0, exitLocation.h());
 
-                            if (player.TryFindPath(new ClusterPathfinder(), destination, IsBlocked, out List<Vector3> pathing))
-                                _exitPathingRequest = new ClusterPathingRequest(_client.LocalPlayerCharacter, null, pathing, false);
+                            var isCity = Enum.GetNames(typeof(TownClusterName)).Select(n => n.Replace("_", " ")).ToArray().Contains(new Cluster(_world.CurrentCluster.Info).Name);
+                            if (player.TryFindPath(new ClusterPathfinder(), destination, isCity ? (StopFunction<Vector2>)IsBlockedCity : IsBlocked, out List<Vector3> pathing))
+                                _exitPathingRequest = new PositionPathingRequest(_client.LocalPlayerCharacter, destination, pathing, false);
                         }
                         else
                         {
@@ -119,7 +122,24 @@ namespace Merlin.Profiles
 
         public bool IsBlocked(Vector2 location)
         {
-            return (_client.Collision.GetFlag(new Vector3(location.x, 0, location.y), 1.2f) > 0);
+            return IsBlocked(new Vector3(location.x, 0, location.y));
+        }
+
+        public bool IsBlocked(Vector3 location)
+        {
+            var flag = _client.Collision.GetFlag(location, 1.2f);
+            return flag > 0;
+        }
+
+        public bool IsBlockedCity(Vector2 location)
+        {
+            return IsBlockedCity(new Vector3(location.x, 0, location.y));
+        }
+
+        public bool IsBlockedCity(Vector3 location)
+        {
+            var flag = _client.Collision.GetFlag(location, 1.2f);
+            return flag > 0 && flag < 255;
         }
 
         #endregion Methods

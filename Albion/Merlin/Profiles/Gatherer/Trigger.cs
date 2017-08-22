@@ -9,5 +9,9 @@
         Overweight,
         EncounteredAttacker,
         EliminatedAttacker,
+        StartTravelling,
+        TravellingDone,
+        StartSiegeCampTreasure,
+        OnSiegeCampTreasureDone,
     }
 }

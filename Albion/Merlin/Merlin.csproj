@@ -123,11 +123,14 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>LocalPlayerCharacterView.tt</DependentUpon>
     </Compile>
+    <Compile Include="Extensions\Views\LootObjectView.cs" />
+    <Compile Include="Extensions\Views\MobView.cs" />
     <Compile Include="Extensions\Views\MountObjectView.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>MountObjectView.tt</DependentUpon>
     </Compile>
+    <Compile Include="Extensions\Views\SilverObjectView.cs" />
     <Compile Include="Extensions\Views\SimulationObjectView.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -163,6 +166,7 @@
     <Compile Include="Profiles\Gatherer\Gatherer.Bank.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.Combat.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.cs" />
+    <Compile Include="Profiles\ESP.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.Harvest.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.Search.cs" />
     <Compile Include="Profiles\Gatherer\Gatherer.UI.cs" />
@@ -174,12 +178,15 @@
     <Compile Include="Profiles\Helper\Tier.cs" />
     <Compile Include="Profiles\Helper\TownClusterName.cs" />
     <Compile Include="Profiles\Helper\EnchantmentLevel.cs" />
+    <Compile Include="Profiles\PositionPathingRequest.cs" />
     <Compile Include="Profiles\WorldPathingRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="API\Global.ttinclude" />
     <None Include="packages.config" />
+    <Compile Include="Profiles\Gatherer\Gatherer.Travel.cs" />
+    <Compile Include="Profiles\Gatherer\Gatherer.SiegeCampTreasure.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

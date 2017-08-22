@@ -10,6 +10,7 @@ namespace Merlin.Profiles.Gatherer
     {
         #region Static
 
+        private static double _minimumAttackableRange = 10;
         private static int _minimumHarvestableTier = 2;
 
         private ClusterPathingRequest _harvestPathingRequest;
@@ -38,6 +39,10 @@ namespace Merlin.Profiles.Gatherer
         public bool ValidateMob(MobView mob)
         {
             if (mob.IsDead())
+                return false;
+
+            var mobAttackTarget = mob.GetAttackTarget();
+            if (mobAttackTarget != null && mobAttackTarget != _localPlayerCharacterView)
                 return false;
 
             return true;
@@ -97,8 +102,24 @@ namespace Merlin.Profiles.Gatherer
                 return;
             }
 
+            var mob = _currentTarget as MobView;
+            var resource = _currentTarget as HarvestableObjectView;
+
+            /* Begin moving closer the target. */
+            var targetCenter = _currentTarget.transform.position;
+            var playerCenter = _localPlayerCharacterView.transform.position;
+
+            var centerDistance = (targetCenter - playerCenter).magnitude;
+            var isNotInLoS = mob != null ? _localPlayerCharacterView.IsInLineOfSight(mob) : false;
+
             if (_harvestPathingRequest != null)
             {
+                if (mob != null && centerDistance <= _minimumAttackableRange && !isNotInLoS)
+                {
+                    _harvestPathingRequest = null;
+                    return;
+                }
+
                 if (_harvestPathingRequest.IsRunning)
                 {
                     if (!HandleMounting(Vector3.zero))
@@ -114,14 +135,9 @@ namespace Merlin.Profiles.Gatherer
                 return;
             }
 
-            /* Begin moving closer the target. */
-            var targetCenter = _currentTarget.transform.position;
-            var playerCenter = _localPlayerCharacterView.transform.position;
+            var minimumDistance = mob != null ? _minimumAttackableRange : _currentTarget.GetColliderExtents() + _localPlayerCharacterView.GetColliderExtents() + 1.5f;
 
-            var centerDistance = (targetCenter - playerCenter).magnitude;
-            var minimumDistance = _currentTarget.GetColliderExtents() + _localPlayerCharacterView.GetColliderExtents() + 1.5f;
-
-            if (centerDistance >= minimumDistance)
+            if (centerDistance > minimumDistance || isNotInLoS)
             {
                 if (!HandleMounting(targetCenter))
                     return;
@@ -134,7 +150,7 @@ namespace Merlin.Profiles.Gatherer
                 return;
             }
 
-            if (_currentTarget is HarvestableObjectView resource)
+            if (resource != null)
             {
                 if (_localPlayerCharacterView.IsHarvesting())
                     return;
@@ -147,6 +163,41 @@ namespace Merlin.Profiles.Gatherer
 
                 _localPlayerCharacterView.CreateTextEffect("[Harvesting]");
                 _localPlayerCharacterView.Interact(resource);
+
+                var resourceTypeString = resource.GetResourceType();
+                if (resourceTypeString.Contains("_"))
+                    resourceTypeString = resourceTypeString.Substring(0, resourceTypeString.IndexOf("_"));
+
+                var resourceType = (ResourceType)Enum.Parse(typeof(ResourceType), resourceTypeString, true);
+                var tier = (Tier)resource.GetTier();
+                var enchantmentLevel = (EnchantmentLevel)resource.GetRareState();
+
+                var position = resource.transform.position;
+                var info = new GatherInformation(resourceType, tier, enchantmentLevel);
+                info.HarvestDate = DateTime.UtcNow;
+
+                if (_gatheredSpots.ContainsKey(position))
+                    _gatheredSpots[position] = info;
+                else
+                    _gatheredSpots.Add(position, info);
+            }
+            else if (mob != null)
+            {
+                if (_localPlayerCharacterView.IsAttacking())
+                    return;
+
+                if (mob.IsDead() && mob.DeadAnimationFinished)
+                {
+                    _localPlayerCharacterView.CreateTextEffect("[Mob Dead]");
+                    _state.Fire(Trigger.DepletedResource);
+                    return;
+                }
+
+                _localPlayerCharacterView.CreateTextEffect("[Attacking]");
+                if (_localPlayerCharacterView.IsMounted)
+                    _localPlayerCharacterView.MountOrDismount();
+                _localPlayerCharacterView.SetSelectedObject(mob);
+                _localPlayerCharacterView.AttackSelectedObject();
             }
         }
 

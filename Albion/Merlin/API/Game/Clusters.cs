@@ -33,6 +33,7 @@ namespace Merlin.API
 		public string InternalName => _cluster.ak();
 
 		public iz.PvpRules PvPRules => _cluster.aq().ap();
+		public iz.UiPvpTypes UiPvPRules => _cluster.aq().a0();
 
 		public ake Internal => _cluster;
 

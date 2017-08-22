@@ -63,7 +63,7 @@ namespace Merlin
 
 		public static arq GetTool(this HarvestableObjectView instance, LocalPlayerCharacterView player)
 		{
-			return instance.HarvestableObject.az(player.LocalPlayerCharacter, true);
+			return instance.HarvestableObject.az(player.LocalPlayerCharacter, false);
 		}
 
 		public static bool RequiresTool(this HarvestableObjectView instance)

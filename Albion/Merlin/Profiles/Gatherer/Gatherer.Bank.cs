@@ -1,9 +1,8 @@
 ﻿using Merlin.API;
-using Merlin.Pathing.Worldmap;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using WorldMap;
 using YinYang.CodeProject.Projects.SimplePathfinding.PathFinders.AStar;
 
 namespace Merlin.Profiles.Gatherer
@@ -12,14 +11,17 @@ namespace Merlin.Profiles.Gatherer
     {
         #region Static
 
+        public static string BankClusterFormat = "Marketplace";
         public static int CapacityForBanking = 99;
 
         #endregion Static
 
         #region Fields
 
-        private WorldPathingRequest _worldPathingRequest;
+        private PositionPathingRequest _bankEntracePathingRequest;
+        private PositionPathingRequest _bankLeavePathingRequest;
         private ClusterPathingRequest _bankPathingRequest;
+        private bool _isDepositing;
 
         #endregion Fields
 
@@ -27,38 +29,47 @@ namespace Merlin.Profiles.Gatherer
 
         public void Bank()
         {
-            if (!_localPlayerCharacterView.IsMounted)
-            {
-                if (_localPlayerCharacterView.IsMounting())
-                    return;
-
-                _localPlayerCharacterView.MountOrDismount();
+            if (!HandleMounting(Vector3.zero))
                 return;
-            }
 
-            if (_localPlayerCharacterView.GetLoadPercent() <= CapacityForBanking)
+            if (_bankLeavePathingRequest != null)
             {
-                _localPlayerCharacterView.CreateTextEffect("[Restart]");
-                _state.Fire(Trigger.Restart);
-                return;
-            }
-
-            if (_worldPathingRequest != null)
-            {
-                if (_worldPathingRequest.IsRunning)
+                if (_bankLeavePathingRequest.IsRunning)
                 {
                     if (!HandleMounting(Vector3.zero))
                         return;
 
-                    _worldPathingRequest.Continue();
+                    _bankLeavePathingRequest.Continue();
                 }
                 else
                 {
-                    _worldPathingRequest = null;
+                    _bankLeavePathingRequest = null;
+                    _isDepositing = false;
+                    Core.Log("[Banking Done]");
+                    _targetCluster = _world.GetCluster(_selectedGatherCluster);
+                    _state.Fire(Trigger.BankDone);
+                    return;
                 }
+
                 return;
             }
 
+            if (_bankEntracePathingRequest != null)
+            {
+                if (_bankEntracePathingRequest.IsRunning)
+                {
+                    if (!HandleMounting(Vector3.zero))
+                        return;
+
+                    _bankEntracePathingRequest.Continue();
+                }
+                else
+                {
+                    _bankEntracePathingRequest = null;
+                }
+
+                return;
+            }
 
             if (_bankPathingRequest != null)
             {
@@ -77,22 +88,47 @@ namespace Merlin.Profiles.Gatherer
                 return;
             }
 
+            if (!_isDepositing && _localPlayerCharacterView.GetLoadPercent() <= CapacityForBanking)
+            {
+                Core.Log("[Skipping. No Banking needed]");
+                _localPlayerCharacterView.CreateTextEffect("[Restart]");
+                _state.Fire(Trigger.Restart);
+                return;
+            }
+
             Vector3 playerCenter = _localPlayerCharacterView.transform.position;
 
-            var currentWorldCluster = _world.CurrentCluster;
-            var _townCluster = _world.GetCluster(SelectedTownCluster);
-
-            var currentCluster = new Cluster(currentWorldCluster.Info);
-            var townCluster = new Cluster(_townCluster.Info);
-
-            Core.Log(string.Format(
-                $"CurrentCluster: {currentCluster.InternalName} {currentCluster.InternalName} {currentCluster.InternalName}"));
-            Core.Log(string.Format(
-                $"CurrentCluster: {townCluster.InternalName} {townCluster.InternalName} {townCluster.InternalName}"));
-
-
+            var currentCluster = new Cluster(alb.a().u());
+            var townClusterObj = _world.GetCluster(SelectedTownCluster);
+            var townCluster = new Cluster(townClusterObj.Info);
+            var bankCluster = townCluster.GetExits().Find(e => e.Destination.Name.Contains(BankClusterFormat)).Destination;
 
             if (currentCluster.Name == townCluster.Name)
+            {
+                var bankExit = FindObjectsOfType<Exit>().First(e => e.name.ToLowerInvariant().Contains("bank"));
+
+                ///* Begin moving closer the target. */
+                var targetCenter = bankExit.transform.position;
+                playerCenter = _localPlayerCharacterView.transform.position;
+
+                var centerDistance = (targetCenter - playerCenter).magnitude;
+                var minimumDistance = _localPlayerCharacterView.GetColliderExtents() + 1.5f;
+
+                if (centerDistance >= minimumDistance)
+                {
+                    if (!HandleMounting(targetCenter))
+                        return;
+
+                    if (_localPlayerCharacterView.TryFindPath(new ClusterPathfinder(), targetCenter, (v) => false,
+                        out List<Vector3> pathing))
+
+                        _bankEntracePathingRequest =
+                            new PositionPathingRequest(_localPlayerCharacterView, bankExit.transform.position, pathing);
+
+                    return;
+                }
+            }
+            else if (currentCluster.Name == bankCluster.Name)
             {
                 var banks = _client.GetEntities<BankBuildingView>((x) => { return true; });
 
@@ -134,51 +170,52 @@ namespace Merlin.Profiles.Gatherer
                     var ToDeposit = new List<UIItemSlot>();
 
                     //Get all items we need
+                    var resourceTypes = Enum.GetNames(typeof(ResourceType)).Select(r => r.ToLowerInvariant()).ToArray();
                     foreach (var slot in playerStorage.ItemsSlotsRegistered)
                         if (slot != null && slot.ObservedItemView != null)
                         {
-                            var name = slot.ObservedItemView.name;
-                            //TODO: Move this as part of new filter to Config
-                            if (!name.Contains("JOURNAL") && (name.Contains("_ROCK") || name.Contains("_ORE") ||
-                                                              name.Contains("_HIDE") || name.Contains("_WOOD") ||
-                                                              name.Contains("_FIBER")))
+                            var slotItemName = slot.ObservedItemView.name.ToLowerInvariant();
+                            if (resourceTypes.Any(r => slotItemName.Contains(r)))
                                 ToDeposit.Add(slot);
                         }
 
+                    _isDepositing = ToDeposit != null && ToDeposit.Count > 0;
                     foreach (var item in ToDeposit)
                     {
                         GameGui.Instance.MoveItemToItemContainer(item, vaultStorage.ItemContainerProxy);
                     }
+                }
 
+                if (_isDepositing)
+                    return;
 
+                ///* Begin moving closer the target. */
+                var exit = FindObjectsOfType<ExitObjectView>().ToList().Find(e => new Cluster(e.ExitObject.sc().o()).Name == townCluster.Name);
 
+                targetCenter = exit.transform.position;
+                playerCenter = _localPlayerCharacterView.transform.position;
 
+                centerDistance = (targetCenter - playerCenter).magnitude;
+                minimumDistance = _localPlayerCharacterView.GetColliderExtents() + 1.5f;
 
+                if (centerDistance >= minimumDistance)
+                {
+                    if (_localPlayerCharacterView.TryFindPath(new ClusterPathfinder(), targetCenter, (v) => false,
+                        out List<Vector3> pathing))
+
+                        _bankLeavePathingRequest =
+                            new PositionPathingRequest(_localPlayerCharacterView, targetCenter, pathing);
+
+                    return;
                 }
             }
             else
             {
-                var path = new List<WorldmapCluster>();
-                var pivotPoints = new List<WorldmapCluster>();
-
-                var worldPathing = new WorldmapPathfinder();
-
-                if (worldPathing.TryFindPath(currentWorldCluster, _townCluster, (cluster) => false, out path, out pivotPoints, true, false))
-                    _worldPathingRequest = new WorldPathingRequest(currentWorldCluster, _townCluster, path);
+                Core.Log("[Start Move To Bank Cluster]");
+                _targetCluster = townClusterObj;
+                _state.Fire(Trigger.StartTravelling);
+                return;
             }
-            //_state.Fire(Trigger.Restart);
-            //_localPlayerCharacterView.RequestMove(playerCenter);
-
-
-            // TODO: If not in town, get request to exit towards town.
-
-            // TODO: Get current cluster, is it town?
-
-            // TODO: Move to bank
-
-            // TODO: Near the bank, bank is open?
-
-            // TODO: Bank is open, move items
         }
 
         #endregion Methods

@@ -51,21 +51,12 @@ namespace Merlin.API
         {
             get
             {
-                LocalActorCameraController localActorCameraController = UnityEngine.Object.FindObjectsOfType<LocalActorCameraController>().FirstOrDefault();
-                if (localActorCameraController == null)
-                {
-                    return 0f;
-                }
-                return localActorCameraController.Outside.Far.Distance;
+                return <#= internalClientType.Name #>.<#= internalClient_getInstance.Name #>().<#= internalClient_getLocalPlayerCharacterView.Name #>() != null ? <#= internalClientType.Name #>.<#= internalClient_getInstance.Name #>().<#= internalClient_getLocalPlayerCharacterView.Name #>().GetComponent<LocalActorCameraController>().Outside.Far.Distance : 0f;
             }
             set
             {
-                LocalActorCameraController localActorCameraController = UnityEngine.Object.FindObjectsOfType<LocalActorCameraController>().FirstOrDefault();
-                if (localActorCameraController == null)
-                {
-                    return;
-                }
-                localActorCameraController.Outside.Far.Distance = value;
+                if (<#= internalClientType.Name #>.<#= internalClient_getInstance.Name #>().<#= internalClient_getLocalPlayerCharacterView.Name #>() != null)
+                    <#= internalClientType.Name #>.<#= internalClient_getInstance.Name #>().<#= internalClient_getLocalPlayerCharacterView.Name #>().GetComponent<LocalActorCameraController>().Outside.Far.Distance = value;
             }
         }
 

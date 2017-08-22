@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Collections.Generic;
 
 using UnityEngine;
 
 namespace Merlin.API
 {
-	public class Landscape
+    public class Landscape
 	{
 		#region Static
 
@@ -51,6 +48,20 @@ namespace Merlin.API
 		{
 			return _landscape.d(position);
 		}
+
+		public List<aea> GetUnrestrictedPvPZones()
+		{
+			return _landscape.f().e;
+		}
+
+        public bool IsInAnyUnrestrictedPvPZone(Vector3 pos)
+        {
+            foreach (var pvpZone in GetUnrestrictedPvPZones())
+                if (Mathf.Pow(pos.x - pvpZone.k(), 2) + Mathf.Pow(pos.z - pvpZone.l(), 2) < Mathf.Pow(pvpZone.m(), 2))
+                    return true;
+
+            return false;
+        }
 
 		#endregion
 	}

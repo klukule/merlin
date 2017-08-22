@@ -36,7 +36,7 @@ namespace Merlin.Profiles.Gatherer
 
             var attackTarget = player.GetAttackTarget();
 
-            if (attackTarget != null)
+            if (attackTarget != null && !attackTarget.IsDead())
             {
                 var selfBuffSpells = spells.Target(gz.SpellTarget.Self).Category(gz.SpellCategory.Buff);
                 if (selfBuffSpells.Any() && !player.IsCastingSpell())
@@ -59,6 +59,22 @@ namespace Merlin.Profiles.Gatherer
                 {
                     player.CreateTextEffect("[Casting Ground Spell]");
                     player.CastAt(groundCCSpells.FirstOrDefault().SpellSlot, attackTarget.transform.position);
+                    return;
+                }
+
+                var selfCCSpells = spells.Target(gz.SpellTarget.Self).Category(gz.SpellCategory.CrowdControl);
+                if (selfCCSpells.Any())
+                {
+                    player.CreateTextEffect("[Casting Self Spell]");
+                    player.CastOnSelf(selfCCSpells.FirstOrDefault().SpellSlot);
+                    return;
+                }
+
+                var enemyDamageSpells = spells.Target(gz.SpellTarget.Enemy).Category(gz.SpellCategory.Damage);
+                if (enemyDamageSpells.Any() && !player.IsCastingSpell())
+                {
+                    player.CreateTextEffect("[Casting Damage Spell]");
+                    player.CastOn(enemyDamageSpells.FirstOrDefault().SpellSlot, player.GetAttackTarget());
                     return;
                 }
 
@@ -93,8 +109,9 @@ namespace Merlin.Profiles.Gatherer
             if (player.IsCasting())
                 return;
 
-            if (player.GetHealth() < (player.GetMaxHealth() * 0.8f))
+            if (player.GetHealth() < (player.GetMaxHealth() * _minimumHealthForGathering))
             {
+                Core.Log($"[Regen Health - {(player.GetHealth()/player.GetMaxHealth()).ToString("P2")}]");
                 var healSpell = spells.Target(gz.SpellTarget.Self).Category(gz.SpellCategory.Heal);
 
                 if (healSpell.Any())
@@ -106,6 +123,7 @@ namespace Merlin.Profiles.Gatherer
             _currentTarget = null;
             _harvestPathingRequest = null;
 
+            Core.Log("[Eliminated]");
             _state.Fire(Trigger.EliminatedAttacker);
         }
 
