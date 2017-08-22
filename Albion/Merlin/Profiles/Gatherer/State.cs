@@ -5,6 +5,8 @@
         Search,
         Harvest,
         Combat,
+        Travel,
         Bank,
+        SiegeCampTreasure,
     }
 }
