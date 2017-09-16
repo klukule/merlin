@@ -23,6 +23,8 @@ namespace Merlin.Profiles.Gatherer
 
         static Rect GatheringBotButtonRect { get; } = new Rect((Screen.width / 2) + 50, 0, 100, 20);
 
+        static Rect UnloadBotButtonRect { get; } = new Rect((Screen.width / 2) - 150, 0, 100, 20); // - dTormentedSoul
+
         Rect GatheringWindowRect { get; set; } = new Rect((Screen.width / 2) - 506, 0, 0, 0);
 
         string[] TownClusterNames { get { return Enum.GetNames(typeof(TownClusterName)).Select(n => n.Replace("_", " ")).ToArray(); } }
@@ -39,6 +41,12 @@ namespace Merlin.Profiles.Gatherer
         {
             if (GUI.Button(GatheringUiButtonRect, "Gathering UI"))
                 _isUIshown = true;
+
+            if (GUI.Button(new Rect((Screen.width / 2) - 200, 0, 150, 20), _inventoryFillDuration)) // - dTormentedSoul
+                Core.Unload();
+
+            if (GUI.Button(new Rect((Screen.width / 2) - 300, 0, 100, 20), _inventoryFillRate)) // - dTormentedSoul
+                Core.Unload();
 
             DrawRunButton(false);
         }

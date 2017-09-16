@@ -37,7 +37,18 @@ namespace Merlin.Profiles.Gatherer
 
     public sealed partial class Gatherer : Profile
     {
-        private bool _isRunning = false;
+        #region [dTormentedSoul Area]
+        private bool _isRunning = true;
+        DateTime _startDateTime = DateTime.Now;
+        float _initialInventoryPercentage = 0.0f;
+        double _inventoryGainPerMinute = 0.0d;
+        int messageDelayTrigger = 50;
+        int messageDelayIncrement = 0;
+        float _inventoryBeforeFull = 0.0f;
+        double _inventoryBeforeFullMinutes = 0.0d;
+        string _inventoryFillRate = "";
+        string _inventoryFillDuration = "";
+        #endregion [dTormentedSoul Area]
 
         private StateMachine<State, Trigger> _state;
         private Dictionary<SimulationObjectView, Blacklisted> _blacklist;
@@ -50,6 +61,8 @@ namespace Merlin.Profiles.Gatherer
 
         protected override void OnStart()
         {
+            _initialInventoryPercentage = _localPlayerCharacterView.GetLoadPercent(); // - dTormentedSoul
+
             _blacklist = new Dictionary<SimulationObjectView, Blacklisted>();
             _gatheredSpots = new Dictionary<Point2, GatherInformation>();
             _keeperSpots = new List<Point2>();
@@ -104,6 +117,12 @@ namespace Merlin.Profiles.Gatherer
 
         protected override void OnUpdate()
         {
+            _inventoryBeforeFull = 99.0f - _localPlayerCharacterView.GetLoadPercent(); // - dTormentedSoul
+            _inventoryGainPerMinute = Math.Round(((_localPlayerCharacterView.GetLoadPercent() - _initialInventoryPercentage) / DateTime.Now.Subtract(_startDateTime).TotalMinutes), 2); // - dTormentedSoul
+            _inventoryBeforeFullMinutes = Math.Round(System.Convert.ToDouble(_inventoryBeforeFull) / _inventoryGainPerMinute, 2); // - dTormentedSoul
+            _inventoryFillRate = System.Convert.ToString(_inventoryGainPerMinute) + "%/min"; // - dTormentedSoul
+            _inventoryFillDuration = System.Convert.ToString(_inventoryBeforeFullMinutes) + "mins remaining"; // - dTormentedSoul
+
             //If we don't have a view, do not do anything!
             if (_localPlayerCharacterView == null)
                 return;

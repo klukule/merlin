@@ -1,49 +1,67 @@
 ﻿using Merlin.API;
 using Merlin.API.Direct;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Merlin.Profiles.Gatherer
 {
     public sealed partial class Gatherer
     {
-        private static List<Tuple<SpellTarget, SpellCategory, bool>> SpellPriorityList = new List<Tuple<SpellTarget, SpellCategory, bool>>
-        {
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Self, SpellCategory.Buff, true),
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Self, SpellCategory.Damage, true),
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Ground, SpellCategory.CrowdControl, true),
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Self, SpellCategory.CrowdControl, true),
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Enemy, SpellCategory.Damage, true),
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Ground, SpellCategory.Damage, true),
-            new Tuple<SpellTarget, SpellCategory, bool>(SpellTarget.Enemy, SpellCategory.MovementBuff, true),
-        };
-
-        private LocalPlayerCharacter _combatPlayer;
-        private FightingObjectView _combatTarget;
-        private IEnumerable<SpellSlot> _combatSpells;
-        private float _combatCooldown;
-
         public void Fight()
         {
+            LocalPlayerCharacter player = _localPlayerCharacterView.GetLocalPlayerCharacter();
+
             if (_localPlayerCharacterView.IsMounted)
             {
                 _localPlayerCharacterView.MountOrDismount();
                 return;
             }
 
-            if (_combatCooldown > 0)
+            var spells = player.GetSpellSlotsIndexed().Ready(_localPlayerCharacterView).Ignore("ESCAPE_DUNGEON").Ignore("PLAYER_COUPDEGRACE").Ignore("AMBUSH");
+
+            #region [Use all spells] - dTormentedSoul // - dTormentedSoul
+            FightingObjectView attackTarget = _localPlayerCharacterView.GetAttackTarget();
+            if (_localPlayerCharacterView.IsCasting()) // - dTormentedSoul
             {
-                _combatCooldown -= UnityEngine.Time.deltaTime;
+                //_localPlayerCharacterView.CreateTextEffect("[Is casting]");
                 return;
             }
+            if (attackTarget != null && !attackTarget.IsDead())
+            {
+                LocalPlayerCharacter localPlayer = _localPlayerCharacterView.LocalPlayerCharacter;
 
-            _combatPlayer = _localPlayerCharacterView.GetLocalPlayerCharacter();
-            _combatTarget = _localPlayerCharacterView.GetAttackTarget();
-            _combatSpells = _combatPlayer.GetSpellSlotsIndexed().Ready(_localPlayerCharacterView).Ignore("ESCAPE_DUNGEON").Ignore("PLAYER_COUPDEGRACE").Ignore("AMBUSH");
+                //_localPlayerCharacterView.CreateTextEffect("[Use all spells] | " + (attackTarget != null ? attackTarget.name : "none"));
+                if (spells.Any() && !_localPlayerCharacterView.IsCasting())
+                {
+                    foreach (SpellSlot sp in spells)
+                    {
+                        try
+                        {
+                            _localPlayerCharacterView.CastOnSelf(sp.Slot);
+                        }
+                        catch { }
+                        try
+                        {
+                            _localPlayerCharacterView.CastOn(sp.Slot, attackTarget);
+                        }
+                        catch { }
+                        try
+                        {
+                            _localPlayerCharacterView.CastAt(sp.Slot, attackTarget.GetPosition());
+                        }
+                        catch { }
+                    }
+                    if (!_localPlayerCharacterView.IsCasting())
+                    {
+                        _localPlayerCharacterView.CastOnSelf(spells.FirstOrDefault().Slot);
+                        _localPlayerCharacterView.CastOn(spells.FirstOrDefault().Slot, attackTarget);
+                        _localPlayerCharacterView.CastAt(spells.FirstOrDefault().Slot, attackTarget.GetPosition());
+                    }
+                    return;
+                }
+            }
+            Profile.UpdateDelay = System.TimeSpan.FromSeconds(0.1d); // - dTormentedSoul
+            #endregion [Use all spells] - dTormentedSoul // - dTormentedSoul
 
-            if (_combatTarget != null && !_combatTarget.IsDead() && SpellPriorityList.Any(s => TryToCastSpell(s.Item1, s.Item2, s.Item3)))
-                return;
 
             if (_localPlayerCharacterView.IsUnderAttack(out FightingObjectView attacker))
             {
@@ -52,76 +70,33 @@ namespace Merlin.Profiles.Gatherer
                 return;
             }
 
-            if (_combatPlayer.GetIsCasting())
-                return;
-
-            if (_combatPlayer.GetHealth().GetValue() < (_combatPlayer.GetHealth().GetMaximum() * 0.8f))
+            #region [health check] // - dTormentedSoul
+            if (player.GetHealth().GetValue() < (player.GetHealth().GetMaximum() * _minimumHealthForGathering))
             {
-                var healSpell = _combatSpells.Target(SpellTarget.Self).Category(SpellCategory.Heal);
+                try 
+                {
 
-                if (healSpell.Any())
-                    _localPlayerCharacterView.CastOnSelf(healSpell.FirstOrDefault().Slot);
+                    var healSpell = spells.Target(SpellTarget.Self).Category(SpellCategory.Heal);
+
+                    if (healSpell.Any())
+                        _localPlayerCharacterView.CastOnSelf(healSpell.FirstOrDefault().Slot);
+                }
+                catch { }
+                _localPlayerCharacterView.CreateTextEffect("[Waiting for Health]");
                 return;
             }
+            if (player.GetEnergy().GetValue() < (player.GetEnergy().GetMaximum() * 0.4f))
+            {
+                _localPlayerCharacterView.CreateTextEffect("[Waiting for Energy]");
+                return;
+            }
+            #endregion [health check] // - dTormentedSoul
 
             _currentTarget = null;
             _harvestPathingRequest = null;
 
             Core.Log("[Eliminated]");
             _state.Fire(Trigger.EliminatedAttacker);
-        }
-
-        bool TryToCastSpell(SpellTarget target, SpellCategory category, bool checkCastState)
-        {
-            try
-            {
-                if (checkCastState && _localPlayerCharacterView.IsCasting())
-                    return false;
-
-                var spells = _combatSpells.Target(target).Category(category);
-                var spellToCast = spells.Any() ? spells.First() : null;
-                if (spellToCast == null)
-                    return false;
-
-                var spellName = "Unknown";
-                try
-                {
-                    spellName = spellToCast.GetSpellDescriptor().TryGetName();
-                    Core.Log($"[Casting {spellName}]");
-
-                    var spellSlot = spellToCast.Slot;
-                    switch (target)
-                    {
-                        case (SpellTarget.Self):
-                            _localPlayerCharacterView.CastOnSelf(spellSlot);
-                            break;
-                        case (SpellTarget.Enemy):
-                            _localPlayerCharacterView.CastOn(spellSlot, _combatTarget);
-                            break;
-                        case (SpellTarget.Ground):
-                            _localPlayerCharacterView.CastAt(spellSlot, _combatTarget.GetPosition());
-                            break;
-                        default:
-                            Core.Log($"[SpellTarget {target} is not supported. Spell skipped]");
-                            return false;
-                    }
-
-                    _combatCooldown = 0.1f;
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    Core.Log($"[Error while casting {spellName} ({target}/{category}/{checkCastState})]");
-                    Core.Log(e);
-                    return false;
-                }
-            }
-            catch (Exception e)
-            {
-                Core.Log($"[Generic casting error ({target}/{category}/{checkCastState})]");
-                Core.Log(e);
-                return false;
-            }
         }
     }
 }

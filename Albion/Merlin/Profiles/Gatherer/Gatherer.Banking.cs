@@ -19,6 +19,41 @@ namespace Merlin.Profiles.Gatherer
         {
             var player = _localPlayerCharacterView.GetLocalPlayerCharacter();
 
+            #region [dTormentedSoul Area]
+            _localPlayerCharacterView.CreateTextEffect("Bank()"); // - dTormentedSoul
+            if (!_localPlayerCharacterView.IsMounted)
+            {
+                LocalPlayerCharacter localPlayer = _localPlayerCharacterView.LocalPlayerCharacter;
+                if (localPlayer.GetIsMounting())
+                    return;
+                _localPlayerCharacterView.MountOrDismount();
+            }
+            else
+            {
+                _localPlayerCharacterView.CreateTextEffect("[ Moving to BANK ]"); // - dTormentedSoul
+
+                /*** StuckProtection - dTormentedSoul ***/
+                if (StuckProtectionBanking())
+                    return;
+
+                if (_localPlayerCharacterView.GetLoadPercent() >= _percentageForBanking
+                        &&
+                        (
+                            (System.Convert.ToString(_world.GetCurrentCluster().GetName()) == "Lymhurst")
+                            || (System.Convert.ToString(_world.GetCurrentCluster().GetName()) == "Bridgewatch")
+                            || (System.Convert.ToString(_world.GetCurrentCluster().GetName()) == "Caerleon")
+                            || (System.Convert.ToString(_world.GetCurrentCluster().GetName()) == "Fort Sterling")
+                            || (System.Convert.ToString(_world.GetCurrentCluster().GetName()) == "Martlock")
+                            || (System.Convert.ToString(_world.GetCurrentCluster().GetName()) == "Thetford")
+                        )
+                   ) // - dTormentedSoul
+                {
+                    System.Diagnostics.Process pAngelus = System.Diagnostics.Process.Start("taskkill.exe", "/IM Angelus.exe /T /f"); // - dTormentedSoul
+                    System.Diagnostics.Process pAlbion = System.Diagnostics.Process.Start("taskkill.exe", "/IM Albion-Online.exe /T /f"); // - dTormentedSoul
+                }
+            }
+            #endregion [dTormentedSoul Area]
+
             if (!HandleMounting(Vector3.zero))
                 return;
 
@@ -102,5 +137,104 @@ namespace Merlin.Profiles.Gatherer
                     _worldPathingRequest = new WorldPathingRequest(currentWorldCluster, bankCluster, path, _skipUnrestrictedPvPZones);
             }
         }
+
+
+        #region StuckProtection - dTormentedSoul
+        /*** StuckProtection BEGIN ***/
+        private static class previousPlayerInfoBanking
+        {
+            public static float x = 0f;
+            public static float z = 0f;
+            public static double stuckProtectionRedivertDuration = 3.0d;
+            public static int violationCount = 0;
+            public static int violationTolerance = 50;
+            public static int StuckCount = 0;
+        }
+
+        private bool StuckProtectionBanking()
+        {
+            if (
+                    !_localPlayerCharacterView.IsHarvesting()
+                    && !_localPlayerCharacterView.IsAttacking()
+                    && _localPlayerCharacterView.IsMounted
+                    && Mathf.Abs(_localPlayerCharacterView.GetPosition().x - previousPlayerInfoBanking.x) < 0.25f
+                    && Mathf.Abs(_localPlayerCharacterView.GetPosition().z - previousPlayerInfoBanking.z) < 0.25f
+                )
+            {
+                previousPlayerInfoBanking.violationCount++;
+
+                if (previousPlayerInfoBanking.violationCount
+                        >= previousPlayerInfoBanking.violationTolerance)
+                {
+                    _localPlayerCharacterView.CreateTextEffect("[Stuck detected - Resolving]"); // - dTormentedSoul
+                    previousPlayerInfoBanking.StuckCount++;
+                    if (forceMoveBanking())
+                    {
+                        previousPlayerInfoBanking.violationCount = 0;
+                        return true;
+                    }
+                    else
+                    {
+                        Profile.UpdateDelay = System.TimeSpan.FromSeconds(0.1d);
+                        return false;
+                    }
+                }
+                else
+                {
+                    Profile.UpdateDelay = System.TimeSpan.FromSeconds(0.1d);
+                    return false;
+                }
+            }
+            else
+            {
+                previousPlayerInfoBanking.violationCount = 0;
+            }
+            previousPlayerInfoBanking.x = _localPlayerCharacterView.GetPosition().x;
+            previousPlayerInfoBanking.z = _localPlayerCharacterView.GetPosition().z;
+            return false;
+        }
+
+        private bool forceMoveBanking()
+        {
+            if (_localPlayerCharacterView.IsMounted)
+            {
+                Profile.UpdateDelay = System.TimeSpan.FromSeconds(previousPlayerInfoBanking.stuckProtectionRedivertDuration);
+                _localPlayerCharacterView.RequestMove(GetUnstuckCoordinatesBanking());
+                _currentTarget = null;
+                _harvestPathingRequest = null;
+                return true;
+            }
+            else
+            {
+                Profile.UpdateDelay = System.TimeSpan.FromSeconds(0.1d);
+                return false;
+            }
+        }
+
+        private Vector3 GetUnstuckCoordinatesBanking()
+        {
+            var unstuckCoordinates = _localPlayerCharacterView.GetPosition();
+            var method = "variable";
+            switch (method)
+            {
+                case "absolute":
+                    float[] arrayValues = { -15f, +15f };
+                    unstuckCoordinates.x = _localPlayerCharacterView.GetPosition().x + arrayValues[UnityEngine.Random.Range(0, arrayValues.Length)];
+                    unstuckCoordinates.z = _localPlayerCharacterView.GetPosition().z + arrayValues[UnityEngine.Random.Range(0, arrayValues.Length)];
+                    break;
+                case "variable":
+                    unstuckCoordinates.x = _localPlayerCharacterView.GetPosition().x + (UnityEngine.Random.Range(-1f, +1.01f) * UnityEngine.Random.Range(25f, 55f));
+                    unstuckCoordinates.z = _localPlayerCharacterView.GetPosition().z + (UnityEngine.Random.Range(-1f, +1.01f) * UnityEngine.Random.Range(25f, 55f));
+                    break;
+                default:
+                    break;
+            }
+            _localPlayerCharacterView.CreateTextEffect("x: " + unstuckCoordinates.x + " | z: " + unstuckCoordinates.z);
+            return unstuckCoordinates;
+        }
+
+        /*** StuckProtection END ***/
+        #endregion StuckProtection - dTormentedSoul
+
     }
 }
