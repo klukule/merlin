@@ -8,15 +8,12 @@ The game code, scripts and Merlin itself is writed in C#, and the Injector in C+
 
 Keep in mind that this tool can be against the Albion Online ToS and you can be banned for using it.
 
-
 ### Features Supported:
- * Combat
- * Harvest
- * Search
- * Bank
- 
+ * Combat mobs
+ * Automatic gathering
+ * Automatic banking 
 
-Have some problems? Modified something you want to share? Create issues or pull requests
+Have some problems? Modified something you want to share? Create issues or pull requests.
 
 ### TO-DO:
 
@@ -32,19 +29,29 @@ https://discord.gg/Z4Qtjty
 
 We have a [Discord Channel](https://discord.gg/Z4Qtjty) community to code tools for Albion Online.
 
+### How it works
 
+The code inside the Albion folder is a .NET solution. The main projects there are:
+* Merlin.API: project that contains some code from a decompiled version of the real game code (Albion)
+* Merlin: project that contains all the "bot logic" (it uses the Merlin.API project for that). As the game was built using the [Unity Engine](https://unity3d.com/pt) the bot code it's nothing than Unity code and C#. 
 
-### Development Requirements (Compile yourself):
+So when you compile this solution (described below) a `Merlin.dll` is generated (containing the bot logic). The next step is to inject this code inside the game process. This is made using the `injector.exe` (also provided in the repo). The `injector.exe` is a compiled program that uses of the [MInject project](https://github.com/EquiFox/MInject) (a mono injection library).
+
+### Development Requirements (compile yourself):
 
  * Visual Studio 2017
  * .NET Framework 3.5
- * Windows 7, 8, 8.1 or 10
+ * Windows 7 or above
  * Injector? There one provided in this github.
  * DLLs from Albion Online (we do not provide them)
- 
+
+For a more detailed "how to install" guide look [here](https://github.com/klukule/merlin/wiki/%5BMerlin%5D-How-to-Download-&-Install)
+  
 ### Runtime Requirements (GUI)
  
- * .NET Framework 3.5
- * Windows 7, 8, 8.1 or 10
+ * Compiled binaries (previous step)
+ * .NET Framework 3.5 (shiped with Windows 7 and above)
  
-This project is licensed under [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/legalcode) license
+ 
+This project is licensed under [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/legalcode) license.
+
