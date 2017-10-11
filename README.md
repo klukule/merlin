@@ -13,7 +13,7 @@ Keep in mind that this tool can be against the Albion Online ToS and you can be 
  * Automatic gathering
  * Automatic banking 
 
-![screenshot from 2017-10-11 11-09-54](https://user-images.githubusercontent.com/1520059/31459703-587317c2-ae9a-11e7-8cb4-923aa9512375.png)
+![fotinha bot](https://user-images.githubusercontent.com/1520059/31459741-795d9822-ae9a-11e7-898a-650c8e0fa34e.png)
 
 Have some problems? Modified something you want to share? Create issues or pull requests.
 
