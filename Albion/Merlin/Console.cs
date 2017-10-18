@@ -22,7 +22,7 @@ public class Console : MonoBehaviour
     private Vector2 scrollPosition;
     private bool show;
     private bool collapse;
-    private bool scroll;
+    private bool scroll = true;
     private bool limit = true;
 
     // Visual elements:
@@ -80,7 +80,6 @@ public class Console : MonoBehaviour
     private void ConsoleWindow(int windowID)
     {
         scrollPosition = GUILayout.BeginScrollView(scroll ? new Vector2(0, float.MaxValue) : scrollPosition);
-
         int i = 0;
         if (limit && logs.Count > 50)
             i = logs.Count - 50; // Starts the log in the last 50 messages
