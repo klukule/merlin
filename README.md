@@ -1,3 +1,5 @@
+# [Merlin has moved here](https://github.com/Merlin-dev)
+
 # Merlin - Albion Online BOT
 
 ## Merlin is currently working with Albion AO 1.0.336.100246
